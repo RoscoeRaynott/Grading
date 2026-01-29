@@ -9,8 +9,14 @@ gap=0.02;
 t=0:gap:1;
 n=100;
 ScoSh=1;
-stdER=3;
 FITTER_TYPE='poly';%'pava';%
+
+% --- Setup Noise Levels to Test ---
+std_vals = [0, 0.1, 0.5, 1, 3, 5, 7];
+n_noise_levels = length(std_vals);
+n_cv_folds = 1; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
+results_table = []; % Will store [stdER, cross_v, trainR2, testR2]
+row_idx = 0;
 is_g=0;
 is_FOU=1;
 is_Clustering=0;
@@ -74,8 +80,18 @@ end
 %gcentering
 gCENTERING=0;
 
-for i=1:n
-    epsi(i)=normrnd(0,stdER);
+%% Loop over Standard Errors
+fprintf('Starting comparison over %d noise levels...\n', n_noise_levels);
+
+for s_idx = 1:n_noise_levels
+    stdER = std_vals(s_idx);
+    fprintf('\nProcessing stdER = %.2f ...\n', stdER);
+
+    % Reset for each noise level
+    costtrue = 0;
+
+    for i=1:n
+        epsi(i)=normrnd(0,stdER);
 %     %Simulation y_i
 %     y(i)=epsi(i)+h(x(i));
 %     if is_g==1
@@ -681,10 +697,27 @@ for ci=1:n_ci
         betamat((ci-1)*4+cross_v,:)=betahat(t);
         hmat((ci-1)*4+cross_v,:)=hhat(ht)';
         gmat((ci-1)*4+cross_v,:)=ghat(gt);
+
+        % Store results for this (stdER, cross_v) combination
+        row_idx = row_idx + 1;
+        results_table(row_idx, :) = [stdER, cross_v, trainR2(cross_v), testR2(cross_v)];
     end
     trainR2
-    testR2    
+    testR2
 end
+end  % end stdER loop
+
+%% Display Final Results Table
+fprintf('\n============================================================\n');
+fprintf('              R^2 Comparison Table (Detailed)\n');
+fprintf('============================================================\n');
+fprintf(' %-10s | %-8s | %-12s | %-12s \n', 'stdER', 'cross_v', 'Train R2', 'Test R2');
+fprintf('------------------------------------------------------------\n');
+for i = 1:size(results_table, 1)
+    fprintf(' %-10.2f | %-8d | %-12.4f | %-12.4f \n', ...
+        results_table(i,1), results_table(i,2), results_table(i,3), results_table(i,4));
+end
+fprintf('============================================================\n');
 % %% CI Prints
 % for i=1:(n_ci*4)
 %      gtemp=DynamicProgrammingQ_Adam(curve_to_q(betamat(i,:)),curve_to_q(betamat(1,:)),0,0);
