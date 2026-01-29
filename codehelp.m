@@ -1,5 +1,9 @@
 clear all;
 close all;
+
+% Initialize parallel pool for faster processing
+if isempty(gcp('nocreate')), parpool; end
+
 %Data creation
 gap=0.02;
 t=0:gap:1;
@@ -23,6 +27,10 @@ const=1;
 
 gamSync=zeros(n,size(t,2));
 costtrue=0;
+f=zeros(n,length(t));
+qi=zeros(n,length(t));
+
+% First loop: Generate curves and initial q representations (sequential - cell arrays)
 for i=1:n
     ci1=normrnd(0,1);
     ci2=normrnd(0,1);
@@ -34,13 +42,24 @@ for i=1:n
     fi{i}=@(x) fi0{i}(gammai{i}(x));
     f(i,:)=fi{i}(t);
     qi(i,:)=curve_to_q(fi{i}(t));
-    if ScoSh==1
-        gamSync(i,:)=DynamicProgrammingQ_Adam(qi(i,:),beta(t),0,0);
-        dumf=interp1(t,f(i,:),gamSync(i,:),'spline');
-        qi(i,:)=curve_to_q(dumf);
-%         qi(i,:)=interp1(t,qi(i,:),gamSync(i,:)).*sqrt(diff([0 gamSync(i,:)])/gap);
+end
+
+% Parallel registration with beta if ScoSh==1 (expensive DynamicProgrammingQ_Adam)
+if ScoSh==1
+    beta_t = beta(t); % Precompute beta(t) once
+    parfor i=1:n
+        gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
+        gamSync(i,:) = gam_i;
+        dumf = interp1(t, f(i,:), gam_i, 'spline');
+        qi(i,:) = curve_to_q(dumf);
     end
-    x(i)=gap*dot(beta(t),qi(i,:));
+end
+
+% Compute x (inner products with beta)
+beta_t = beta(t);
+x = zeros(1,n);
+for i=1:n
+    x(i)=gap*dot(beta_t,qi(i,:));
 end
 ht=min(x):0.1:max(x);
 gt=min(f(:,1)):0.1:max(f(:,1));
@@ -388,17 +407,22 @@ for ci=1:n_ci
     %                 if i>1
     %                     hhat=@(x) (x'.^(0:pp)*p')'; 
     %                 end
-                    %Q registered with beta
-                    qihat=zeros(size(ftrain));                           
-                    for k=1:ntrain
-                        qihat(k,:)=curve_to_q(ftrain(k,:));
-                        if REG==1                  
-                            gam(k,:)=DynamicProgrammingQ_Adam(qihat(k,:),betahat(t),0,0);
-
-                            gam(k,1)=0;gam(k,end)=1;
-                            dumf=interp1(t,ftrain(k,:),gam(k,:),'spline');
-
-                            qihat(k,:)=curve_to_q(dumf);
+                    %Q registered with beta (parallelized)
+                    qihat=zeros(size(ftrain));
+                    gam=zeros(ntrain, length(t));
+                    if REG==1
+                        betahat_t = betahat(t); % Precompute for parfor
+                        parfor k=1:ntrain
+                            q_k = curve_to_q(ftrain(k,:));
+                            gam_k = DynamicProgrammingQ_Adam(q_k, betahat_t, 0, 0);
+                            gam_k(1)=0; gam_k(end)=1;
+                            dumf = interp1(t, ftrain(k,:), gam_k, 'spline');
+                            qihat(k,:) = curve_to_q(dumf);
+                            gam(k,:) = gam_k;
+                        end
+                    else
+                        for k=1:ntrain
+                            qihat(k,:)=curve_to_q(ftrain(k,:));
                         end
                     end
                     %innerprod
@@ -437,7 +461,7 @@ for ci=1:n_ci
                     c=cnew;
                 end
 
-                %s_i(beta) calculation
+                %s_i(beta) calculation (parallelized registration)
                 yihat=ytrain';
                 betahat=@(t) c(1)*basis{1}(t);
                 for k=2:J
@@ -445,26 +469,45 @@ for ci=1:n_ci
                 end
                 FF=figure(cross_v+10);
                 clf(FF);
-                for j=1:size(ftrain,1)
-                    qihat(j,:)=curve_to_q(ftrain(j,:));
-                    if REG==1
-                        gam(j,:)=DynamicProgrammingQ_Adam(qihat(j,:),betahat(t),0,0);
-                        gam(j,1)=0;gam(j,end)=1;
-                        dumf=interp1(t,ftrain(j,:),gam(j,:),'spline');
-                        qihat(j,:)=curve_to_q(dumf);
+
+                % Parallel computation of qihat and gam
+                nftrain = size(ftrain,1);
+                qihat = zeros(nftrain, length(t));
+                gam = zeros(nftrain, length(t));
+                dumf_all = zeros(nftrain, length(t)); % Store for plotting
+
+                if REG==1
+                    betahat_t = betahat(t); % Precompute for parfor
+                    parfor j=1:nftrain
+                        q_j = curve_to_q(ftrain(j,:));
+                        gam_j = DynamicProgrammingQ_Adam(q_j, betahat_t, 0, 0);
+                        gam_j(1)=0; gam_j(end)=1;
+                        dumf_j = interp1(t, ftrain(j,:), gam_j, 'spline');
+                        qihat(j,:) = curve_to_q(dumf_j);
+                        gam(j,:) = gam_j;
+                        dumf_all(j,:) = dumf_j;
                     end
-                    if is_Clustering>=1                        
-                        figure(cross_v+10);                        
+                else
+                    for j=1:nftrain
+                        qihat(j,:) = curve_to_q(ftrain(j,:));
+                    end
+                end
+
+                % Sequential plotting (if clustering enabled)
+                for j=1:nftrain
+                    if is_Clustering>=1
+                        figure(cross_v+10);
                         % 1. Capture handles for all 4 subplots immediately
                         ax1 = subplot(2,2,1); hold on;
                         ax2 = subplot(2,2,2); hold on;
                         ax3 = subplot(2,2,3); hold on;
                         ax4 = subplot(2,2,4); hold on;
-                        
+
                         % 3. Proceed with plotting (using handles to switch focus)
                         subplot(ax1); plot(t,betahat(t),'g','LineWidth',3);
                         subplot(ax2); plot(t,betahat(t),'g','LineWidth',3);
 
+                        dumf = dumf_all(j,:);
                         if ytrain(j)==Class1
                             subplot(ax3); % Switch to bottom-left
                             plot(t,dumf,'Color','r');
@@ -478,11 +521,11 @@ for ci=1:n_ci
                             subplot(ax2); % Switch back to top-right
                             plot(t,qihat(j,:),'Color','b');
                         end
-                        
+
                         % 2. Link them (This is the key step)
                         linkaxes([ax1, ax2], 'y');
                         linkaxes([ax3, ax4], 'y');
-                        
+
                         axis([ax3, ax4], 'normal');
                         if j<=10
                             gggg=DynamicProgrammingQ_Adam(curve_to_q(f(j,:)),betahat(t),0,0);
@@ -504,7 +547,7 @@ for ci=1:n_ci
                                 plot(t,ggggg,'Color','b','LineWidth',2);
                                 hold on;
 %                             end
-                            
+
                         end
                     end
                     yihat(j)=gap*betahat(t)*qihat(j,:)';
@@ -589,16 +632,29 @@ for ci=1:n_ci
         plot(ytrain',ytr_pred,'.',ytrain',ytrain','-');
         hold on;
 
-        %Testing
-        for j=1:size(ftest,1)
-            qihat2(j,:)=curve_to_q(ftest(j,:));
-            if REG==1
-                gam(j,:)=DynamicProgrammingQ_Adam(qihat2(j,:),betahat(t),0,0);
-                gam(j,1)=0;gam(j,end)=1;
-                dumf=interp1(t,ftest(j,:),gam(j,:),'spline');
-                qihat2(j,:)=curve_to_q(dumf);
+        %Testing (parallelized)
+        nftest = size(ftest,1);
+        qihat2 = zeros(nftest, length(t));
+        yihat2 = zeros(1, nftest);
+
+        if REG==1
+            betahat_t = betahat(t); % Precompute for parfor
+            parfor j=1:nftest
+                q_j = curve_to_q(ftest(j,:));
+                gam_j = DynamicProgrammingQ_Adam(q_j, betahat_t, 0, 0);
+                gam_j(1)=0; gam_j(end)=1;
+                dumf = interp1(t, ftest(j,:), gam_j, 'spline');
+                qihat2(j,:) = curve_to_q(dumf);
             end
-            yihat2(j)=gap*betahat(t)*qihat2(j,:)';
+        else
+            for j=1:nftest
+                qihat2(j,:) = curve_to_q(ftest(j,:));
+            end
+        end
+        % Compute yihat2 (sequential - fast dot products)
+        betahat_t = betahat(t);
+        for j=1:nftest
+            yihat2(j) = gap*betahat_t*qihat2(j,:)';
         end
         if hCENTERING==1
             yihat2=yihat2/norm(yihat);%from training
