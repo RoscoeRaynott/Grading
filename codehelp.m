@@ -17,6 +17,12 @@ n_noise_levels = length(std_vals);
 n_cv_folds = 1; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
 results_table = []; % Will store [stdER, cross_v, trainR2, testR2]
 row_idx = 0;
+
+% Huber loss parameter (robust to outliers at high noise)
+huber_delta = 1.5;  % Tune this: lower = more robust, higher = closer to least squares
+huber_loss = @(e) sum((abs(e) <= huber_delta) .* (0.5 * e.^2) + ...
+                      (abs(e) > huber_delta) .* (huber_delta * (abs(e) - 0.5*huber_delta)));
+
 is_g=0;
 is_FOU=1;
 is_Clustering=0;
@@ -448,8 +454,8 @@ for ci=1:n_ci
                     if any(isnan(inp(:)) | isinf(inp(:)))
                         error('NaN or Inf detected in inp matrix');
                     end
-                    %beta calculation
-                    Cost_fn=@(ccc) sum((ytrain-ghat(ftrain(:,1))-hhat(ccc*inp')).^2);
+                    %beta calculation (using Huber loss for robustness)
+                    Cost_fn=@(ccc) huber_loss(ytrain-ghat(ftrain(:,1))-hhat(ccc*inp'));
                     initial_cost = Cost_fn(c);
                     if isnan(initial_cost) || isinf(initial_cost)
                         error('Cost_fn is NaN/Inf at the very start!');
