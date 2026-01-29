@@ -1,5 +1,15 @@
-Error: File: h_calc.m Line: 338 Column: 44
-Invalid expression. When calling a function or indexing a variable, use parentheses. Otherwise, check for mismatched delimiters.
-
-Error in MONOdebug (line 519)
-                    [p_or_table, hhat, ~] = h_calc(yihat, ytrain', pp, h_rep, FITTER_TYPE,const);
+============================================================
+              R^2 Comparison Table (Detailed)
+============================================================
+ stdER      | cross_v  | Train R2     | Test R2      
+------------------------------------------------------------
+ 3.00       | 1        | 0.6390       | 0.7447       
+ 3.00       | 2        | 0.6794       | 0.6157       
+ 3.00       | 3        | 0.7252       | 0.5210       
+ 5.00       | 1        | 0.4458       | 0.3483       
+ 5.00       | 2        | 0.4081       | 0.4066       
+ 5.00       | 3        | 0.4537       | 0.4933       
+ 7.00       | 1        | 0.3857       | 0.3127       
+ 7.00       | 2        | 0.3624       | 0.3887       
+ 7.00       | 3        | 0.4014       | 0.2492       
+============================================================
