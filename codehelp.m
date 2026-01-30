@@ -18,10 +18,8 @@ n_cv_folds = 1; % Number of cross-validation folds (change cross_v loop to 1:4 f
 results_table = []; % Will store [stdER, cross_v, trainR2, testR2]
 row_idx = 0;
 
-% Huber loss parameter (robust to outliers at high noise)
-huber_delta = 1.5;  % Tune this: lower = more robust, higher = closer to least squares
-huber_loss = @(e) sum((abs(e) <= huber_delta) .* (0.5 * e.^2) + ...
-                      (abs(e) > huber_delta) .* (huber_delta * (abs(e) - 0.5*huber_delta)));
+% Huber loss scale factor (delta = huber_scale * stdER)
+huber_scale = 1.5;  % Tune this multiplier
 
 is_g=0;
 is_FOU=1;
@@ -92,6 +90,11 @@ fprintf('Starting comparison over %d noise levels...\n', n_noise_levels);
 for s_idx = 1:n_noise_levels
     stdER = std_vals(s_idx);
     fprintf('\nProcessing stdER = %.2f ...\n', stdER);
+
+    % Adaptive Huber loss: delta scales with noise level
+    huber_delta = max(0.1, huber_scale * stdER);  % Avoid delta=0 when stdER=0
+    huber_loss = @(e) sum((abs(e) <= huber_delta) .* (0.5 * e.^2) + ...
+                          (abs(e) > huber_delta) .* (huber_delta * (abs(e) - 0.5*huber_delta)));
 
     % Reset for each noise level
     costtrue = 0;
