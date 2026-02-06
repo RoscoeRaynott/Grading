@@ -258,27 +258,27 @@
 clear all;
 close all;
 
-% --- Setup Noise Levels to Test ---
-std_vals = [0, 0.1, 0.5, 1, 3, 5, 7]; 
-n_trials = length(std_vals);
-results_table = zeros(n_trials, 3); % Columns: stdER, R2_L2, R2_Shape
+% --- Setup Sample Sizes to Test ---
+n_vals = [30, 60, 100, 200, 300, 500];
+n_trials = length(n_vals);
+results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
 if isempty(gcp('nocreate')), parpool; end 
 
-fprintf('Starting comparison over %d noise levels...\n', n_trials);
+fprintf('Starting comparison over %d sample sizes...\n', n_trials);
 
-%% Loop over Standard Errors
+%% Loop over Sample Sizes
 for s_idx = 1:n_trials
-    
-    % 1. Set current Noise Level
-    stdER = std_vals(s_idx);
-    fprintf('\nProcessing stdER = %.2f ...\n', stdER);
-    
-    % --- DATA GENERATION (Inside loop to apply new noise) ---
+
+    % 1. Set current sample size and fixed noise
+    n = n_vals(s_idx);
+    stdER = 0.5;
+    fprintf('\nProcessing n = %d ...\n', n);
+
+    % --- DATA GENERATION (Inside loop for each sample size) ---
     gap=0.02;
     t=0:gap:1;
-    n=100; 
     
     F = zeros(n, length(t)); 
     qi = zeros(n, length(t)); 
@@ -325,17 +325,17 @@ for s_idx = 1:n_trials
     [~, ~, R2_1] = run_regression_pipeline(Q_train, F_train, y_train, Q_test, F_test, y_test, t, 1);
     
     % Store Results
-    results_table(s_idx, :) = [stdER, R2_0, R2_1];
+    results_table(s_idx, :) = [n, R2_0, R2_1];
 end
 
 %% Display Final Table
 fprintf('\n=========================================\n');
 fprintf('       R^2 Comparison Table\n');
 fprintf('=========================================\n');
-fprintf(' %-10s | %-12s | %-12s \n', 'stdER', 'R2 (L2)', 'R2 (Shape)');
+fprintf(' %-10s | %-12s | %-12s \n', 'n', 'R2 (L2)', 'R2 (Shape)');
 fprintf('-----------------------------------------\n');
 for i = 1:n_trials
-    fprintf(' %-10.2f | %-12.4f | %-12.4f \n', ...
+    fprintf(' %-10d | %-12.4f | %-12.4f \n', ...
         results_table(i,1), results_table(i,2), results_table(i,3));
 end
 fprintf('-----------------------------------------\n');
