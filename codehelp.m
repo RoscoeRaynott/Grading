@@ -7,15 +7,14 @@ if isempty(gcp('nocreate')), parpool; end
 %Data creation
 gap=0.02;
 t=0:gap:1;
-n=100;
 ScoSh=1;
 FITTER_TYPE='poly';%'pava';%
 
-% --- Setup Noise Levels to Test ---
-std_vals = [0, 0.1, 0.5, 1, 3, 5, 7];
-n_noise_levels = length(std_vals);
+% --- Setup Sample Sizes to Test ---
+n_vals = [30, 60, 100, 200, 300, 500];
+n_sample_sizes = length(n_vals);
 n_cv_folds = 1; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
-results_table = []; % Will store [stdER, cross_v, trainR2, testR2]
+results_table = []; % Will store [n, cross_v, trainR2, testR2]
 row_idx = 0;
 
 % Huber loss scale factor (delta = huber_scale * stdER)
@@ -32,47 +31,7 @@ beta=@(t) v(1)*sin(2*pi*t)+v(2)*cos(2*pi*t)+v(3)*sin(4*pi*t)+v(4)*cos(4*pi*t)+v(
 h=@(t) t;%t.^3+5*t;%3*t+4;%-3*t.^3;%t.^5+6*t.^3;%tan(t);%log(t);%t.^5+-t;%
 g=@(t) t.^2;%t.^3-3.*t;%0;%t;%5*t.^2-4;%10.*t-4;%
 
-y=zeros(n,1);
 const=1;
-
-gamSync=zeros(n,size(t,2));
-costtrue=0;
-f=zeros(n,length(t));
-qi=zeros(n,length(t));
-
-% First loop: Generate curves and initial q representations (sequential - cell arrays)
-for i=1:n
-    ci1=normrnd(0,1);
-    ci2=normrnd(0,1);
-    ci3=normrnd(0,1);
-    ci4=normrnd(0,1);
-    fi0{i}=@(t) ci1*sqrt(2)*sin(2*pi*t)+ci2*sqrt(2)*cos(2*pi*t);
-    alpha=unifrnd(-1,1);
-    gammai{i}=@(t) t+alpha.*(t).*(t-1);
-    fi{i}=@(x) fi0{i}(gammai{i}(x));
-    f(i,:)=fi{i}(t);
-    qi(i,:)=curve_to_q(fi{i}(t));
-end
-
-% Parallel registration with beta if ScoSh==1 (expensive DynamicProgrammingQ_Adam)
-if ScoSh==1
-    beta_t = beta(t); % Precompute beta(t) once
-    parfor i=1:n
-        gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
-        gamSync(i,:) = gam_i;
-        dumf = interp1(t, f(i,:), gam_i, 'spline');
-        qi(i,:) = curve_to_q(dumf);
-    end
-end
-
-% Compute x (inner products with beta)
-beta_t = beta(t);
-x = zeros(1,n);
-for i=1:n
-    x(i)=gap*dot(beta_t,qi(i,:));
-end
-ht=min(x):0.1:max(x);
-gt=min(f(:,1)):0.1:max(f(:,1));
 
 %hcentering
 hCENTERING=0;
@@ -84,20 +43,66 @@ end
 %gcentering
 gCENTERING=0;
 
-%% Loop over Standard Errors
-fprintf('Starting comparison over %d noise levels...\n', n_noise_levels);
+%% Loop over Sample Sizes
+fprintf('Starting comparison over %d sample sizes...\n', n_sample_sizes);
 
-for s_idx = 1:n_noise_levels
-    stdER = std_vals(s_idx);
-    fprintf('\nProcessing stdER = %.2f ...\n', stdER);
+for s_idx = 1:n_sample_sizes
+    n = n_vals(s_idx);
+    stdER = 0.01;
+    fprintf('\nProcessing n = %d ...\n', n);
 
     % Adaptive Huber loss: delta scales with noise level
-    huber_delta = max(0.1, huber_scale * stdER);  % Avoid delta=0 when stdER=0
+    huber_delta = max(0.1, huber_scale * stdER);
     huber_loss = @(e) sum((abs(e) <= huber_delta) .* (0.5 * e.^2) + ...
                           (abs(e) > huber_delta) .* (huber_delta * (abs(e) - 0.5*huber_delta)));
 
-    % Reset for each noise level
-    costtrue = 0;
+    % Clear variables that change size with n
+    clear yte_pred ytest_store epsi inp;
+
+    % --- Data generation for this sample size ---
+    y=zeros(n,1);
+    gamSync=zeros(n,size(t,2));
+    costtrue=0;
+    f=zeros(n,length(t));
+    qi=zeros(n,length(t));
+    fi0 = cell(1,n); gammai = cell(1,n); fi = cell(1,n);
+
+    % Generate curves and initial q representations
+    for i=1:n
+        ci1=normrnd(0,1);
+        ci2=normrnd(0,1);
+        ci3=normrnd(0,1);
+        ci4=normrnd(0,1);
+        fi0{i}=@(t) ci1*sqrt(2)*sin(2*pi*t)+ci2*sqrt(2)*cos(2*pi*t);
+        alpha=unifrnd(-1,1);
+        gammai{i}=@(t) t+alpha.*(t).*(t-1);
+        fi{i}=@(x) fi0{i}(gammai{i}(x));
+        f(i,:)=fi{i}(t);
+        qi(i,:)=curve_to_q(fi{i}(t));
+    end
+
+    % Parallel registration with beta if ScoSh==1
+    if ScoSh==1
+        beta_t = beta(t);
+        parfor i=1:n
+            gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
+            gamSync(i,:) = gam_i;
+            dumf = interp1(t, f(i,:), gam_i, 'spline');
+            qi(i,:) = curve_to_q(dumf);
+        end
+    end
+
+    % Compute x (inner products with beta)
+    beta_t = beta(t);
+    x = zeros(1,n);
+    for i=1:n
+        x(i)=gap*dot(beta_t,qi(i,:));
+    end
+    ht=min(x):0.1:max(x);
+    gt=min(f(:,1)):0.1:max(f(:,1));
+
+    % --- Generate y with fixed noise ---
+    epsi = zeros(1,n);
 
     for i=1:n
         epsi(i)=normrnd(0,stdER);
@@ -707,23 +712,23 @@ for ci=1:n_ci
         hmat((ci-1)*4+cross_v,:)=hhat(ht)';
         gmat((ci-1)*4+cross_v,:)=ghat(gt);
 
-        % Store results for this (stdER, cross_v) combination
+        % Store results for this (n, cross_v) combination
         row_idx = row_idx + 1;
-        results_table(row_idx, :) = [stdER, cross_v, trainR2(cross_v), testR2(cross_v)];
+        results_table(row_idx, :) = [n, cross_v, trainR2(cross_v), testR2(cross_v)];
     end
     trainR2
     testR2
 end
-end  % end stdER loop
+end  % end sample size loop
 
 %% Display Final Results Table
 fprintf('\n============================================================\n');
 fprintf('              R^2 Comparison Table (Detailed)\n');
 fprintf('============================================================\n');
-fprintf(' %-10s | %-8s | %-12s | %-12s \n', 'stdER', 'cross_v', 'Train R2', 'Test R2');
+fprintf(' %-10s | %-8s | %-12s | %-12s \n', 'n', 'cross_v', 'Train R2', 'Test R2');
 fprintf('------------------------------------------------------------\n');
 for i = 1:size(results_table, 1)
-    fprintf(' %-10.2f | %-8d | %-12.4f | %-12.4f \n', ...
+    fprintf(' %-10d | %-8d | %-12.4f | %-12.4f \n', ...
         results_table(i,1), results_table(i,2), results_table(i,3), results_table(i,4));
 end
 fprintf('============================================================\n');
