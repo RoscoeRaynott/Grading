@@ -142,14 +142,10 @@ n=100
 ============================================================
 
 
-figNums = [50, 51, 150, 151, 350, 251];
-titles  = {'Title for Fig 50', 'Title for Fig 51', ...
-           'Title for Fig 150', 'Title for Fig 151', ...
-           'Title for Fig 350', 'Title for Fig 251'};
+figNums = [50, 51, 150, 151, 350, 251]; 
+titles = {'$\sigma =0.5$', '$\sigma =0.5$', '$\sigma =1.5$', '$\sigma =1.5$','$\sigma =3.5$', '$\sigma =2.5$'};
 
-for k = 1:length(figNums)
-    figure(figNums(k));
-    ax = gca;
+for k = 1:length(figNums) figure(figNums(k)); ax = gca;
 
     % Line width and marker size
     lines = findobj(ax, 'Type', 'Line');
@@ -164,7 +160,7 @@ for k = 1:length(figNums)
     % Labels and title
     xlabel('Number of Observations (n)', 'FontSize', 14);
     ylabel('Test R^2', 'FontSize', 14);
-    title(titles{k}, 'FontSize', 14);
+    title(titles{k}, 'FontSize', 14, 'Interpreter', 'latex');
 
     % Box
     box on;
