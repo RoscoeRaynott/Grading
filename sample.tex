@@ -1,0 +1,135 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb, amsfonts} % For math formulas
+\usepackage{graphicx}                     % For including plots
+\usepackage{geometry}                     % For margins
+\usepackage{booktabs}                     % For professional tables
+\usepackage{multirow}                     % For merging rows in tables
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\title{\textbf{Local Distance-Based Functional Regression: \\ Derivation and Comparative Analysis}}
+\author{Research Report}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{The Model}
+We model the scalar response $y$ based on functional predictors $\mathbf{q}$ using a non-parametric kernel regression framework (Nadaraya-Watson). The prediction is a weighted average of training responses, where weights decay exponentially with distance.
+
+\subsection{Estimator Definition}
+For a query point $\mathbf{q}_{\text{new}}$, the predicted response $\hat{y}_{\text{new}}$ is:
+\begin{equation}
+    \hat{y}_{\text{new}} = \sum_{i=1}^n w_{i, \text{new}} \cdot y_i
+\end{equation}
+where $i$ indexes the training set.
+
+\subsection{Kernel Weights}
+The weights $w_{i, \text{new}}$ are normalized such that they sum to 1:
+\begin{equation}
+    w_{i, \text{new}} = \frac{u_{i, \text{new}}}{\sum_{j=1}^n u_{j, \text{new}}}
+\end{equation}
+The unnormalized kernel value $u_{i, \text{new}}$ is defined by a Gaussian function:
+\begin{equation}
+    u_{i, \text{new}} = \exp\left( - \frac{d^2_S(\mathbf{q}_i, \mathbf{q}_{\text{new}})}{\tau} \right)
+\end{equation}
+Here, $\tau$ is the bandwidth parameter, and $d^2_S(\cdot, \cdot)$ is the Shape distance metric.
+
+\section{Optimization and Derivation}
+The critical hyperparameter $\tau$ is learned by minimizing the \textbf{Leave-One-Out Cross-Validation (LOOCV)} error. This ensures the model generalizes well to unseen data.
+
+\subsection{Cost Function}
+We seek to minimize the sum of squared leave-one-out errors:
+\begin{equation}
+    J(\tau) = \sum_{k=1}^n (y_k - \hat{y}_k^{(-k)})^2
+\end{equation}
+where $\hat{y}_k^{(-k)}$ uses all points $i \neq k$ to predict point $k$.
+
+\subsection{Gradient Derivation}
+To optimize $\tau$, we compute the gradient $\frac{\partial J}{\partial \tau}$. Applying the chain rule:
+
+\begin{equation}
+    \frac{\partial J}{\partial \tau} = \sum_{k=1}^n \frac{\partial J}{\partial \hat{y}_k} \cdot \frac{\partial \hat{y}_k}{\partial \tau}
+\end{equation}
+
+\noindent \textbf{Step 1: Derivative of Cost}
+\begin{equation}
+    \frac{\partial J}{\partial \hat{y}_k} = -2(y_k - \hat{y}_k)
+\end{equation}
+
+\noindent \textbf{Step 2: Derivative of Weights}
+Using the quotient rule on $w_{i,k} = u_{i,k} / S_k$ (where $S_k = \sum u$), and noting that $\frac{\partial u}{\partial \tau} = u \cdot \frac{d^2_S}{\tau^2}$:
+\begin{equation}
+    \frac{\partial w_{i,k}}{\partial \tau} = \frac{w_{i,k}}{\tau^2} \left( d_{ik}^2 - \sum_{j \neq k} w_{j,k} d_{jk}^2 \right)
+\end{equation}
+Let $\bar{D}_k = \sum_{j \neq k} w_{j,k} d_{jk}^2$ be the locally weighted average distance.
+
+\noindent \textbf{Step 3: Final Gradient}
+Substituting back, we obtain the analytical gradient:
+\begin{equation}
+    \frac{\partial J}{\partial \tau} = -2 \sum_{k=1}^n (y_k - \hat{y}_k) \sum_{i \neq k} y_i \left[ \frac{w_{i,k}}{\tau^2} \left( d_{ik}^2 - \bar{D}_k \right) \right]
+\end{equation}
+This gradient drives the optimization of $\tau$.
+
+\section{Experimental Results}
+In this section, we present the results from two experimental setups: the dataset with length as responses and amplitude as responses. We analyze the Cross-validated Test Set Prediction Performance as a function of the standard deviation of the Gaussian errors.
+
+Figure \ref{fig:new_results} displays the performance curves for three methods: SI-ScoSH, Kernel Regression with $L^2$ distance, and Kernel Regression with Shape distance.
+
+\begin{figure}[h!]
+    \centering
+    \setlength{\tabcolsep}{2pt}
+    \begin{tabular}{cc}
+        \includegraphics[width=0.45\textwidth]{KernelvsSIscoShLen.eps} &
+        \includegraphics[width=0.45\textwidth]{KernelvsSIscoShAmp.eps} \\
+        (a) Dataset Length & (b) Dataset Amplitude
+    \end{tabular}
+    \caption{Cross-validated Test Set Prediction Performance vs. StdDev of Gaussian errors. The plots compare SI-ScoSH, Kernel Regression ($L^2$), and Kernel Regression (Shape Dist).}
+    \label{fig:new_results}
+\end{figure}
+
+The interesting thing to note in the plots is as follows: at std.dev values less than 2 in the Length dataset and less than 3 in Amplitude one, SI-Scosh line is above the kernel regression with Shape dist line. But after that , SI-ScoSh drastically decreases but K.reg with Shape Dist decreases less drastically. K.reg with $L_2$ distance is way worse than both.
+% \section{Experimental Results}
+% We evaluate the proposed framework on two distinct examples. For each, we compare the Standard $L^2$ (ScoSh=0) and Shape Aligned (ScoSh=1) metrics.
+% 
+% \subsection{Visual Analysis}
+% Figure \ref{fig:side_by_side} displays the comparative prediction results for both examples side-by-side.
+% 
+% \begin{figure}[h!]
+%     \centering
+%     \setlength{\tabcolsep}{2pt} % Reduce gap between columns
+%     \begin{tabular}{cc}
+%         \includegraphics[width=0.5\textwidth]{LOOCVLen.eps} &
+%         \includegraphics[width=0.5\textwidth]{LOOCVAmp.eps} 
+%         \end{tabular}
+%     \caption{True vs. Predicted Responses. Blue circles = Standard $L^2$, Red crosses = Shape Aligned. The dashed line is $Y=X$.}
+%     \label{fig:side_by_side}
+% \end{figure}
+% 
+% \subsection{Summary of Performance}
+% Table \ref{tab:combined_results} summarizes the optimal bandwidths and goodness-of-fit metrics ($R^2$ and MSE) for both examples.
+% 
+% \begin{table}[h!]
+%     \centering
+%     \renewcommand{\arraystretch}{1.2}
+%     \begin{tabular}{llcc}
+%         \toprule
+%         \textbf{Dataset} & \textbf{Method} & \textbf{Optimal $\tau$} & \textbf{Test $R^2$} \\
+%         \midrule
+%         \multirow{2}{*}{\textbf{Len}} 
+%           & Standard $L^2$ (ScoSh=0) & 12.71 & 0.819 \\
+%           & Shape Aligned (ScoSh=1)  & 4.57 & 0.957 \\
+%         \midrule
+%         \multirow{2}{*}{\textbf{Amp}} 
+%           & Standard $L^2$ (ScoSh=0) & 13.59 & 0.83 \\
+%           & Shape Aligned (ScoSh=1)  & 5.22 & 0.95 \\
+%         \bottomrule
+%     \end{tabular}
+%     \caption{Comparative performance metrics for Example 1 and Example 2.}
+%     \label{tab:combined_results}
+% \end{table}
+
+\end{document}
