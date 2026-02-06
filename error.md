@@ -142,16 +142,22 @@ n=100
 ============================================================
 
 
-figNums = [50, 51, 150, 151, 350, 251]; 
-titles = {'$\sigma =0.5$', '$\sigma =0.5$', '$\sigma =1.5$', '$\sigma =1.5$','$\sigma =3.5$', '$\sigma =2.5$'};
+figNums = [50, 51, 150, 151, 350, 251];
+titles  = {'$\sigma =0.5$', '$\sigma =0.5$', '$\sigma =1.5$', '$\sigma =1.5$', '$\sigma =3.5$', '$\sigma =2.5$'};
 
-for k = 1:length(figNums) figure(figNums(k)); ax = gca;
+legendNames  = {'SI-ScoSH', 'Kernel (L^2)', 'Kernel (Shape Dist)'};
+lineColors   = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.4660 0.6740 0.1880]};  % blue, orange, green
 
-    % Line width and marker size
+for k = 1:length(figNums)
+    figure(figNums(k));
+    ax = gca;
+
+    % Line width, marker size, and consistent colors
     lines = findobj(ax, 'Type', 'Line');
-    for j = 1:length(lines)
+    for j = 1:min(length(lines), 3)
         lines(j).LineWidth  = 2.0;
         lines(j).MarkerSize = 10;
+        lines(j).Color      = lineColors{j};
     end
 
     % Font size for axes (tick labels, etc.)
@@ -165,9 +171,7 @@ for k = 1:length(figNums) figure(figNums(k)); ax = gca;
     % Box
     box on;
 
-    % Legend font size
-    leg = findobj(ax, 'Type', 'Legend');
-    if ~isempty(leg)
-        leg.FontSize = 14;
-    end
+    % Legend
+    legend(legendNames, 'FontSize', 14, 'Location', 'best');
 end
+
