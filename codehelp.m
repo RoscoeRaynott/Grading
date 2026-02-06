@@ -378,7 +378,7 @@ for ci=1:n_ci
     testR2=zeros(1,4);
     trainR2=zeros(1,4);
 
-    for cross_v=1:1
+    for cross_v=1:n_cv_folds
     %     clear yihat yihat2 qihat qihat2 gam inp ytr_pred yte_pred
         cross_v
         %TestTrain Breakup
