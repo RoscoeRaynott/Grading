@@ -92,6 +92,32 @@ Figure \ref{fig:new_results} displays the performance curves for three methods: 
 \end{figure}
 
 The interesting thing to note in the plots is as follows: at std.dev values less than 2 in the Length dataset and less than 3 in Amplitude one, SI-Scosh line is above the kernel regression with Shape dist line. But after that , SI-ScoSh drastically decreases but K.reg with Shape Dist decreases less drastically. K.reg with $L_2$ distance is way worse than both.
+
+\subsection{Experiment 2: Performance vs.\ Number of Observations}
+
+In the second experiment, we fix the noise level (standard deviation of Gaussian errors) and vary the number of observations $n \in \{30, 60, 100, 200, 300, 500\}$. This allows us to study how each method's prediction performance scales with sample size at a given noise regime. We consider three fixed noise levels --- low ($\sigma = \sigma_1$), medium ($\sigma = \sigma_2$), and high ($\sigma = \sigma_3$) --- for both the Length and Amplitude datasets.
+
+\begin{figure}[h!]
+    \centering
+    \setlength{\tabcolsep}{2pt}
+    \begin{tabular}{cc}
+        \includegraphics[width=0.45\textwidth]{NvsPerfLen_stder1.eps} &
+        \includegraphics[width=0.45\textwidth]{NvsPerfAmp_stder1.eps} \\
+        (a) Dataset Length, $\sigma = \sigma_1$ & (b) Dataset Amplitude, $\sigma = \sigma_1$ \\[6pt]
+        \includegraphics[width=0.45\textwidth]{NvsPerfLen_stder2.eps} &
+        \includegraphics[width=0.45\textwidth]{NvsPerfAmp_stder2.eps} \\
+        (c) Dataset Length, $\sigma = \sigma_2$ & (d) Dataset Amplitude, $\sigma = \sigma_2$ \\[6pt]
+        \includegraphics[width=0.45\textwidth]{NvsPerfLen_stder3.eps} &
+        \includegraphics[width=0.45\textwidth]{NvsPerfAmp_stder3.eps} \\
+        (e) Dataset Length, $\sigma = \sigma_3$ & (f) Dataset Amplitude, $\sigma = \sigma_3$
+    \end{tabular}
+    \caption{Cross-validated Test Set Prediction Performance ($R^2$) vs.\ number of observations $n$, at three fixed noise levels. Each plot compares SI-ScoSH, Kernel Regression ($L^2$), and Kernel Regression (Shape Dist).}
+    \label{fig:n_vs_perf}
+\end{figure}
+
+% TODO: Replace with final analysis once inferences are ready.
+For the Length dataset, the general trend is that as $n$ increases at each fixed noise level, SI-ScoSH and Kernel Regression with Shape distance converge in performance. Kernel Regression with $L^2$ distance remains consistently below both shape-aware methods across all sample sizes and noise levels.
+
 % \section{Experimental Results}
 % We evaluate the proposed framework on two distinct examples. For each, we compare the Standard $L^2$ (ScoSh=0) and Shape Aligned (ScoSh=1) metrics.
 % 
