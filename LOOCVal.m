@@ -256,7 +256,7 @@
 %% 
 
 clear all;
-close all;
+% close all;
 
 % --- Setup Sample Sizes to Test ---
 n_vals = [30, 60, 100, 200, 300, 500];
