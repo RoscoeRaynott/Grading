@@ -143,35 +143,29 @@ n=100
 
 
 figNums = [50, 51, 150, 151, 350, 251];
-titles  = {'$\sigma =0.5$', '$\sigma =0.5$', '$\sigma =1.5$', '$\sigma =1.5$', '$\sigma =3.5$', '$\sigma =2.5$'};
+legendNames = {'SI-ScoSH', 'K.reg (Shape dist)', 'K.reg (L_2 dist)'}; lineColors = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.4660 0.6740 0.1880]}; % blue, orange, green
 
-legendNames  = {'SI-ScoSH', 'Kernel (L^2)', 'Kernel (Shape Dist)'};
-lineColors   = {[0 0.4470 0.7410], [0.8500 0.3250 0.0980], [0.4660 0.6740 0.1880]};  % blue, orange, green
+for k = 1:length(figNums) figure(figNums(k)); ax = gca;
 
-for k = 1:length(figNums)
-    figure(figNums(k));
-    ax = gca;
-
-    % Line width, marker size, and consistent colors
-    lines = findobj(ax, 'Type', 'Line');
-    for j = 1:min(length(lines), 3)
-        lines(j).LineWidth  = 2.0;
-        lines(j).MarkerSize = 10;
-        lines(j).Color      = lineColors{j};
-    end
-
-    % Font size for axes (tick labels, etc.)
-    ax.FontSize = 14;
-
-    % Labels and title
-    xlabel('Number of Observations (n)', 'FontSize', 14);
-    ylabel('Test R^2', 'FontSize', 14);
-    title(titles{k}, 'FontSize', 14, 'Interpreter', 'latex');
-
-    % Box
-    box on;
-
-    % Legend
-    legend(legendNames, 'FontSize', 14, 'Location', 'best');
+% Line width, marker size, and consistent colors
+lines = findobj(ax, 'Type', 'Line');
+for j = 1:min(length(lines), 3)
+    lines(j).LineWidth  = 2.0;
+    lines(j).MarkerSize = 10;
+    lines(j).Color      = lineColors{j};
 end
 
+% Font size for axes (tick labels, etc.)
+ax.FontSize = 14;
+
+% Labels and title
+xlabel('Number of Observations (n)', 'FontSize', 14);
+ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
+title(titles{k}, 'FontSize', 14, 'Interpreter', 'latex');
+
+% Box
+box on;
+% Legend
+legend(legendNames, 'FontSize', 14, 'Location', 'best');
+1+1
+end
