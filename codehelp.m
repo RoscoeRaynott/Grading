@@ -2,127 +2,138 @@ clear all;
 % close all;
 
 % Initialize parallel pool for faster processing
-if isempty(gcp('nocreate')), parpool; end
-
-%Data creation
-gap=0.02;
-t=0:gap:1;
-ScoSh=1;
-FITTER_TYPE='poly';%'pava';%
-
-% --- Setup Sample Sizes to Test ---
-n_vals = [60, 100, 150, 200, 250, 300, 350, 400, 450,  500];
-n_sample_sizes = length(n_vals);
-n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
-results_table = []; % Will store [n, cross_v, trainR2, testR2]
-row_idx = 0;
-
-% Huber loss scale factor (delta = huber_scale * stdER)
-huber_scale = 1.5;  % Tune this multiplier
-
-is_g=1;
-is_FOU=1;
-is_Clustering=0;
-Class1=1;
-Class2=0;%Class1/2;
-v=[sqrt(2) 1 sqrt(2) 1 sqrt(2) 1]*sqrt(2);
-        
-beta=@(t) v(1)*sin(2*pi*t)+v(2)*cos(2*pi*t)+v(3)*sin(4*pi*t)+v(4)*cos(4*pi*t)+v(5)*sin(6*pi*t)+v(6)*cos(6*pi*t);
-h=@(t) t;%t.^3+5*t;%3*t+4;%-3*t.^3;%t.^5+6*t.^3;%tan(t);%log(t);%t.^5+-t;%
-g=@(t) t.^2;%t.^3-3.*t;%0;%t;%5*t.^2-4;%10.*t-4;%
-
-const=1;
-
-%hcentering
-hCENTERING=0;
-
-if hCENTERING==1
-    x=x/norm(x);
+if isempty(gcp('nocreate')), parpool;
 end
 
-%gcentering
-gCENTERING=0;
+    % Data creation gap = 0.02;
+t = 0 : gap : 1;
+ScoSh = 1;
+FITTER_TYPE = 'poly';
+% 'pava';
+%
 
-%% Loop over Sample Sizes
-fprintf('Starting comparison over %d sample sizes...\n', n_sample_sizes);
+        % -- -Setup Sample Sizes to Test-- -
+    n_vals = [
+  32, 48, 68, 80, 100, 120, 140, 160, 184, 200, 228, 252, 280, 300, 348, 400,
+  452, 500
+];
+n_sample_sizes = length(n_vals);
+n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
+results_table = [];
+% Will store[n, cross_v, trainR2, testR2] row_idx = 0;
 
-for s_idx = 1:n_sample_sizes
-    n = n_vals(s_idx);
-    stdER = 0.5;
-    fprintf('\nProcessing n = %d ...\n', n);
+% Huber loss scale factor(delta = huber_scale * stdER) huber_scale = 1.5;
+% Tune this multiplier
 
-    % Adaptive Huber loss: delta scales with noise level
-    huber_delta = max(0.1, huber_scale * stdER);
-    huber_loss = @(e) sum((abs(e) <= huber_delta) .* (0.5 * e.^2) + ...
-                          (abs(e) > huber_delta) .* (huber_delta * (abs(e) - 0.5*huber_delta)));
+        is_g = 1;
+is_FOU = 1;
+is_Clustering = 0;
+Class1 = 1;
+Class2 = 0;
+% Class1 / 2;
+v = [sqrt(2) 1 sqrt(2) 1 sqrt(2) 1] * sqrt(2);
 
-    % Clear variables that change size with n
-    clear yte_pred ytest_store epsi inp;
+beta = @(t) v(1) * sin(2 * pi * t) + v(2) * cos(2 * pi * t) +
+       v(3) * sin(4 * pi * t) + v(4) * cos(4 * pi * t) +
+       v(5) * sin(6 * pi * t) + v(6) * cos(6 * pi * t);
+h = @(t) t;
+% t.^ 3 + 5 * t;
+% 3 * t + 4;
+% -3 * t.^ 3;
+% t.^ 5 + 6 * t.^ 3;
+% tan(t);
+% log(t);
+% t.^ 5 + -t;
+% g = @(t) t.^ 2;
+% t.^ 3 - 3. * t;
+% 0;
+% t;
+% 5 * t.^ 2 - 4;
+% 10. * t - 4;
+%
+
+    const = 1;
+
+% hcentering hCENTERING = 0;
+
+if hCENTERING
+  == 1 x = x / norm(x);
+end
+
+    % gcentering gCENTERING = 0;
+
+% %
+    Loop over Sample Sizes fprintf(
+        'Starting comparison over %d sample sizes...\n', n_sample_sizes);
+
+for
+  s_idx = 1 : n_sample_sizes n = n_vals(s_idx);
+stdER = 0.5;
+fprintf('\nProcessing n = %d ...\n', n);
+
+% Adaptive Huber loss : delta scales with noise level huber_delta =
+    max(0.1, huber_scale *stdER);
+huber_loss = @(e) sum((abs(e) <= huber_delta).*(0.5 * e.^ 2) +
+                      ...(abs(e) > huber_delta).*
+                          (huber_delta * (abs(e) - 0.5 * huber_delta)));
+
+% Clear variables that change size with n clear yte_pred ytest_store epsi inp;
 
     % --- Data generation for this sample size ---
     y=zeros(n,1);
-    gamSync=zeros(n,size(t,2));
-    costtrue=0;
-    f=zeros(n,length(t));
-    qi=zeros(n,length(t));
-    fi0 = cell(1,n); gammai = cell(1,n); fi = cell(1,n);
+    gamSync = zeros(n, size(t, 2));
+    costtrue = 0;
+    f = zeros(n, length(t));
+    qi = zeros(n, length(t));
+    fi0 = cell(1, n);
+    gammai = cell(1, n);
+    fi = cell(1, n);
 
     % Generate curves and initial q representations
     for i=1:n
         ci1=normrnd(0,1);
-        ci2=normrnd(0,1);
-        ci3=normrnd(0,1);
-        ci4=normrnd(0,1);
-        fi0{i}=@(t) ci1*sqrt(2)*sin(2*pi*t)+ci2*sqrt(2)*cos(2*pi*t);
-        alpha=unifrnd(-1,1);
-        gammai{i}=@(t) t+alpha.*(t).*(t-1);
-        fi{i}=@(x) fi0{i}(gammai{i}(x));
-        f(i,:)=fi{i}(t);
-        qi(i,:)=curve_to_q(fi{i}(t));
+    ci2 = normrnd(0, 1);
+    ci3 = normrnd(0, 1);
+    ci4 = normrnd(0, 1);
+    fi0{i} =
+        @(t) ci1 * sqrt(2) * sin(2 * pi * t) + ci2 * sqrt(2) * cos(2 * pi * t);
+    alpha = unifrnd(-1, 1);
+    gammai{i} = @(t) t + alpha.*(t).*(t - 1);
+    fi{i} = @(x) fi0{i}(gammai{i}(x));
+    f(i, :) = fi{i}(t);
+    qi(i, :) = curve_to_q(fi{i}(t));
     end
 
-    % Parallel registration with beta if ScoSh==1
-    if ScoSh==1
-        beta_t = beta(t);
-        parfor i=1:n
-            gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
-            gamSync(i,:) = gam_i;
-            dumf = interp1(t, f(i,:), gam_i, 'spline');
-            qi(i,:) = curve_to_q(dumf);
-        end
-    end
+            % Parallel registration with beta if ScoSh ==
+        1 if ScoSh == 1 beta_t = beta(t);
+    parfor i = 1 : n gam_i = DynamicProgrammingQ_Adam(qi(i, :), beta_t, 0, 0);
+    gamSync(i, :) = gam_i;
+    dumf = interp1(t, f(i, :), gam_i, 'spline');
+    qi(i, :) = curve_to_q(dumf);
+    end end
 
-    % Compute x (inner products with beta)
-    beta_t = beta(t);
-    x = zeros(1,n);
-    for i=1:n
-        x(i)=gap*dot(beta_t,qi(i,:));
-    end
-    ht=min(x):0.1:max(x);
-    gt=min(f(:,1)):0.1:max(f(:,1));
+        % Compute x(inner products with beta) beta_t = beta(t);
+    x = zeros(1, n);
+    for
+      i = 1 : n x(i) = gap * dot(beta_t, qi(i, :));
+    end ht = min(x) : 0.1 : max(x);
+    gt = min(f( :, 1)) : 0.1 : max(f( :, 1));
 
-    % --- Generate y with fixed noise ---
-    epsi = zeros(1,n);
+    % -- -Generate y with fixed noise-- - epsi = zeros(1, n);
 
-    for i=1:n
-        epsi(i)=normrnd(0,stdER);
-%     %Simulation y_i
-%     y(i)=epsi(i)+h(x(i));
-%     if is_g==1
-%         y(i)=y(i)+g(f(i,1));
-%     end
-    
-    %Semi Real y_i
-        y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);%
-        costtrue=costtrue+epsi(i)^2;
-    end
-if is_Clustering==1
-    my=mean(y);
-    for i=1:n
-        if y(i)>my
-            y(i)=Class1;
-        else
-            y(i)=0;
+    for
+      i = 1 : n epsi(i) = normrnd(0, stdER);
+    % % Simulation y_i % y(i) = epsi(i) + h(x(i));
+    % if is_g == 1 % y(i) = y(i) + g(f(i, 1));
+    % end
+
+        % Semi Real y_i y(i) = epsi(i) + max(f(i, :)) - min(f(i, :));
+    % sum(abs(diff([0 fi{i}(t)]) / gap) * gap);
+    % costtrue = costtrue + epsi(i) ^ 2;
+    end if is_Clustering == 1 my = mean(y);
+    for
+      i = 1 : n if y (i) > my y(i) = Class1;
+    else y(i) = 0;
         end
     end
 end
@@ -131,78 +142,80 @@ end
 if is_Clustering==2
     for i=1:n/2
         ci1=normrnd(0,1);
-        ci2=normrnd(0,1);
-        fi0{i}=@(t) abs(ci1)*sqrt(2)*sin(1*pi*t);%+ci2*sqrt(2)*cos(2*pi*t);
-        alpha=unifrnd(-1,1);
-        gammai{i}=@(t) t+alpha.*(t).*(t-1);
-        fi{i}=@(x) fi0{i}(gammai{i}(x));
-        f(i,:)=fi{i}(t)/norm(fi{i}(t));
-        qi(i,:)=curve_to_q(fi{i}(t));
-        y(i)=Class2;
-        ci1=normrnd(0,1);
-        ci2=normrnd(0,1);
-        ci3=normrnd(0,1);
-        ci4=normrnd(0,1);
-        fi0{n/2+i}=@(t) ci1*sqrt(2)*sin(3*pi*t);%+ci4*sqrt(2)*cos(4*pi*t);%ci2*sqrt(2)*cos(2*pi*t);%+ci3*sqrt(2)*sin(4*pi*t)+
-        alpha=unifrnd(-1,1);
-        gammai{n/2+i}=@(t) t+alpha.*(t).*(t-1);
-        fi{n/2+i}=@(x) fi0{n/2+i}(gammai{n/2+i}(x));
-        f(n/2+i,:)=fi{n/2+i}(t)/norm(fi{n/2+i}(t));
-        qi(n/2+i,:)=curve_to_q(fi{n/2+i}(t));
-        y(n/2+i)=Class1;
-    end
-    mee=sum(qi(1:5,:)+qi((n/2+1):(n/2+5),:))/10;
-    for i=1:10
-        figure(901);
-        plot(t,f(i,:),'LineWidth',2,'Color','g');
-        hold on;
-        plot(t,f(n/2+i,:),'LineWidth',2,'Color','b');
-        gaaaama=DynamicProgrammingQ_Adam(qi(i,:),mee,0,0);
-        gaaaaama=DynamicProgrammingQ_Adam(qi(n/2+i,:),mee,0,0);
-        figure(903);
-        plot(t,interp1(t,f(i,:),gaaaama,'spline'),'g','LineWidth',2);
-        hold on;
-        plot(t,interp1(t,f(n/2+i,:),gaaaaama,'spline'),'b','LineWidth',2);
-        figure(902);
-        plot(t,gaaaama,'g','LineWidth',2);
-        hold on;
-        plot(t,gaaaaama,'b','LineWidth',2);
-    end
+        ci2 = normrnd(0, 1);
+        fi0{i} = @(t) abs(ci1) * sqrt(2) * sin(1 * pi * t);
+        % +ci2 *sqrt(2) * cos(2 * pi * t);
+        alpha = unifrnd(-1, 1);
+        gammai{i} = @(t) t + alpha.*(t).*(t - 1);
+        fi{i} = @(x) fi0{i}(gammai{i}(x));
+        f(i, :) = fi{i}(t) / norm(fi{i}(t));
+        qi(i, :) = curve_to_q(fi{i}(t));
+        y(i) = Class2;
+        ci1 = normrnd(0, 1);
+        ci2 = normrnd(0, 1);
+        ci3 = normrnd(0, 1);
+        ci4 = normrnd(0, 1);
+        fi0{n / 2 + i} = @(t) ci1 * sqrt(2) * sin(3 * pi * t);
+        % +ci4 *sqrt(2) * cos(4 * pi * t);
+        % ci2 *sqrt(2) * cos(2 * pi * t);
+        % +ci3 *sqrt(2) * sin(4 * pi * t) + alpha = unifrnd(-1, 1);
+        gammai{n / 2 + i} = @(t) t + alpha.*(t).*(t - 1);
+        fi{n / 2 + i} = @(x) fi0{n / 2 + i}(gammai{n / 2 + i}(x));
+        f(n / 2 + i, :) = fi{n / 2 + i}(t) / norm(fi{n / 2 + i}(t));
+        qi(n / 2 + i, :) = curve_to_q(fi{n / 2 + i}(t));
+        y(n / 2 + i) = Class1;
+        end mee = sum(qi(1 : 5, :) + qi((n / 2 + 1) : (n / 2 + 5), :)) / 10;
+    for
+      i = 1 : 10 figure(901);
+    plot(t, f(i, :), 'LineWidth', 2, 'Color', 'g');
+    hold on;
+    plot(t, f(n / 2 + i, :), 'LineWidth', 2, 'Color', 'b');
+    gaaaama = DynamicProgrammingQ_Adam(qi(i, :), mee, 0, 0);
+    gaaaaama = DynamicProgrammingQ_Adam(qi(n / 2 + i, :), mee, 0, 0);
     figure(903);
-    plot(t,mee,'r');
+    plot(t, interp1(t, f(i, :), gaaaama, 'spline'), 'g', 'LineWidth', 2);
+    hold on;
+    plot(t, interp1(t, f(n / 2 + i, :), gaaaaama, 'spline'), 'b', 'LineWidth',
+         2);
+    figure(902);
+    plot(t, gaaaama, 'g', 'LineWidth', 2);
+    hold on;
+    plot(t, gaaaaama, 'b', 'LineWidth', 2);
+    end figure(903);
+    plot(t, mee, 'r');
     figure(904)
     for i=1:5
         figure(904);
-        plot(i,0,'b.');
-        hold on;
-        plot(5+i,1,'g.');
-        
+    plot(i, 0, 'b.');
+    hold on;
+    plot(5 + i, 1, 'g.');
+
     end
 
-    figure(904);
-    plot(10,1.3,'.',2,-0.2,'.');
-    save_pixels('BLURR.png',602,470);
+        figure(904);
+    plot(10, 1.3, '.', 2, -0.2, '.');
+    save_pixels('BLURR.png', 602, 470);
 end
     
 % % %% SpanishWeatherDAta Experiment
 % %       
 % % for Data1=1
 % % load("Data1.mat");
-% % index=randperm(size(X,1),size(X,1));
-% % %X=X(:,1:3:365);
-% % s=zeros(1,31);
-% % Xo=X(:,1:5:365);
+% % index = randperm(size(X, 1), size(X, 1));
+% % % X = X( :, 1 : 3 : 365);
+% % s = zeros(1, 31);
+% % Xo = X( :, 1 : 5 : 365);
 % % for J=30
 % %     X=Xo;
-% %     gap=1/(size(X,2)-1);
-% %     t=0:gap:1;
-% %     %J=21;
+% % gap = 1 / (size(X, 2) - 1);
+% % t = 0 : gap : 1;
+% % % J = 21;
 % %     % basis functions
 % %     for i=1:(J-1/2)
 % %         basis{1}=@(t) ones(1,size(t,2))/norm(ones(1,size(t,2)));
 % %         for j=1:i
 % %             basis{2*j}=@(t) sin(2*pi*j*t)/norm(sin(2*pi*j*t));
-% %             basis{2*j+1}=@(t) cos(2*pi*j*t)/norm(cos(2*pi*j*t));
+% % basis{2 *j + 1} = @(t) cos(2 * pi * j * t) / norm(cos(2 * pi * j * t));
 % %         end
 % %     end
 % %     
@@ -214,13 +227,10 @@ end
 % %         end
 % %         
 % % %         figure(91);
-% % %         plot(t,X(k,:),'+-',t,plott,'.');
-% %         %s(J)=s(J)+norm(X(k,:)-plott);
-% %         X(k,:)=plott;
-% %     end
-% % %     s(J)
-% % end
-% % figure(91);
+% % % plot(t, X(k, :), '+-', t, plott, '.');
+% % % s(J) = s(J) + norm(X(k, :) - plott);
+% % X(k, :) = plott;
+% % end % % % s(J) % % end % % figure(91);
 % % plot(X','.-');
 % % end
 % % f=X;
@@ -732,6 +742,21 @@ for i = 1:size(results_table, 1)
         results_table(i,1), results_table(i,2), results_table(i,3), results_table(i,4));
 end
 fprintf('============================================================\n');
+
+%% Plot SI-ScoSH line on shared figure 6769
+unique_n = unique(results_table(:,1));
+median_testR2 = zeros(length(unique_n),1);
+for k = 1:length(unique_n)
+    median_testR2(k) = median(results_table(results_table(:,1)==unique_n(k), 4));
+end
+figure(6769); hold on;
+plot(unique_n, median_testR2, 'o-', 'Color', [0 0.4470 0.7410], ...
+    'LineWidth', 2, 'MarkerSize', 10, 'DisplayName', 'SI-ScoSH');
+xlabel('Number of Observations (n)', 'FontSize', 14);
+ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
+title('$\sigma =0.5$', 'FontSize', 14, 'Interpreter', 'latex');
+legend('FontSize', 14, 'Location', 'best');
+box on; grid on;
 
 % tess=n_vals;
 % for i=1:n_sample_sizes
