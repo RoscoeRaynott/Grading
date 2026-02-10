@@ -259,7 +259,7 @@ clear all;
 % close all;
 
 % --- Setup Sample Sizes to Test ---
-n_vals = [40, 60, 80, 100, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
+n_vals = 40:20:620; % 30 equally spaced values, all divisible by 4
 n_trials = length(n_vals);
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 

@@ -11,7 +11,7 @@ ScoSh=1;
 FITTER_TYPE='poly';%'pava';%
 
 % --- Setup Sample Sizes to Test ---
-n_vals = [40, 60, 80, 100, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
+n_vals = 40:20:620; % 30 equally spaced values, all divisible by 4
 n_sample_sizes = length(n_vals);
 n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
 results_table = []; % Will store [n, cross_v, trainR2, testR2]
