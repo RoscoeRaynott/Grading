@@ -259,7 +259,7 @@ clear all;
 % close all;
 
 % --- Setup Sample Sizes to Test ---
-n_vals = [60, 100, 150, 200, 250, 300, 350, 400, 450,  500];
+n_vals = [40, 60, 80, 100, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
 n_trials = length(n_vals);
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
@@ -339,6 +339,19 @@ for i = 1:n_trials
         results_table(i,1), results_table(i,2), results_table(i,3));
 end
 fprintf('-----------------------------------------\n');
+
+figure(6769);
+hold on;
+plot(n_vals, results_table(:,2)', 's-', 'Color', [0.8500 0.3250 0.0980], ...
+    'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (Shape dist)');
+plot(n_vals, results_table(:,3)', 'd-', 'Color', [0.4660 0.6740 0.1880], ...
+    'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (L_2 dist)');
+xlabel('Number of Observations (n)', 'FontSize', 14);
+ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
+title('$\sigma =0.5$', 'FontSize', 14, 'Interpreter', 'latex');
+legend('FontSize', 14, 'Location', 'best');
+ax = gca; ax.FontSize = 14;
+box on;
 
 % (Keep your helper functions below this line)
 %% --- HELPER FUNCTIONS ---

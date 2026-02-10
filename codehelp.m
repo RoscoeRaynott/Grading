@@ -11,7 +11,7 @@ ScoSh=1;
 FITTER_TYPE='poly';%'pava';%
 
 % --- Setup Sample Sizes to Test ---
-n_vals = [60, 100, 150, 200, 250, 300, 350, 400, 450,  500];
+n_vals = [40, 60, 80, 100, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560];
 n_sample_sizes = length(n_vals);
 n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
 results_table = []; % Will store [n, cross_v, trainR2, testR2]
@@ -733,12 +733,22 @@ for i = 1:size(results_table, 1)
 end
 fprintf('============================================================\n');
 
-tess=n_vals;
-for i=1:n_sample_sizes
-    tess(i)=(results_table(2*i-1,4)+results_table(2*i,4))/2.0;
+% Compute median test R^2 per sample size
+median_testR2 = zeros(1, n_sample_sizes);
+for i = 1:n_sample_sizes
+    idx = results_table(:,1) == n_vals(i);
+    median_testR2(i) = median(results_table(idx, 4));
 end
-figure(51);
-plot(n_vals,tess,'x-');
+figure(6769);
+hold on;
+plot(n_vals, median_testR2, 'o-', 'Color', [0 0.4470 0.7410], ...
+    'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'SI-ScoSH');
+xlabel('Number of Observations (n)', 'FontSize', 14);
+ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
+title('$\sigma =0.5$', 'FontSize', 14, 'Interpreter', 'latex');
+legend('FontSize', 14, 'Location', 'best');
+ax = gca; ax.FontSize = 14;
+box on;
 % %% CI Prints
 % for i=1:(n_ci*4)
 %      gtemp=DynamicProgrammingQ_Adam(curve_to_q(betamat(i,:)),curve_to_q(betamat(1,:)),0,0);
