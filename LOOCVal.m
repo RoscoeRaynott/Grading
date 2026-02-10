@@ -270,6 +270,8 @@ fprintf('Starting comparison over %d sample sizes...\n', n_trials);
 
 %% Loop over Sample Sizes
 for s_idx = 1:n_trials
+    % --- Stop flag: create a file called STOP.flag to break cleanly ---
+    if exist('STOP.flag', 'file'), fprintf('STOP flag detected. Breaking.\n'); delete('STOP.flag'); break; end
 
     % 1. Set current sample size and fixed noise
     n = n_vals(s_idx);
@@ -326,6 +328,10 @@ for s_idx = 1:n_trials
     
     % Store Results
     results_table(s_idx, :) = [n, R2_0, R2_1];
+
+    % --- Save intermediate results ---
+    save('partial_results_LOOCVal.mat', 'results_table', 's_idx', 'n_vals');
+    fprintf('Saved intermediate results (s_idx=%d).\n', s_idx);
 end
 
 %% Display Final Table

@@ -47,6 +47,9 @@ gCENTERING=0;
 fprintf('Starting comparison over %d sample sizes...\n', n_sample_sizes);
 
 for s_idx = 1:n_sample_sizes
+    % --- Stop flag: create a file called STOP.flag to break cleanly ---
+    if exist('STOP.flag', 'file'), fprintf('STOP flag detected. Breaking.\n'); delete('STOP.flag'); break; end
+
     n = n_vals(s_idx);
     stdER = 0.5;
     fprintf('\nProcessing n = %d ...\n', n);
@@ -719,6 +722,9 @@ for ci=1:n_ci
     trainR2
     testR2
 end
+    % --- Save intermediate results ---
+    save('partial_results_codehelp.mat', 'results_table', 's_idx', 'n_vals');
+    fprintf('Saved intermediate results (s_idx=%d).\n', s_idx);
 end  % end sample size loop
 
 %% Display Final Results Table
