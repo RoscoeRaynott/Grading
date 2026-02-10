@@ -1,5 +1,5 @@
 clear all;
-close all;
+% close all;
 
 % Initialize parallel pool for faster processing
 if isempty(gcp('nocreate')), parpool; end
@@ -11,16 +11,16 @@ ScoSh=1;
 FITTER_TYPE='poly';%'pava';%
 
 % --- Setup Sample Sizes to Test ---
-n_vals = [30, 60, 100, 200, 300, 500];
+n_vals = [60, 100, 150, 200, 250, 300, 350, 400, 450,  500];
 n_sample_sizes = length(n_vals);
-n_cv_folds = 1; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
+n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
 results_table = []; % Will store [n, cross_v, trainR2, testR2]
 row_idx = 0;
 
 % Huber loss scale factor (delta = huber_scale * stdER)
 huber_scale = 1.5;  % Tune this multiplier
 
-is_g=0;
+is_g=1;
 is_FOU=1;
 is_Clustering=0;
 Class1=1;
@@ -48,7 +48,7 @@ fprintf('Starting comparison over %d sample sizes...\n', n_sample_sizes);
 
 for s_idx = 1:n_sample_sizes
     n = n_vals(s_idx);
-    stdER = 0.01;
+    stdER = 0.5;
     fprintf('\nProcessing n = %d ...\n', n);
 
     % Adaptive Huber loss: delta scales with noise level
@@ -113,9 +113,9 @@ for s_idx = 1:n_sample_sizes
 %     end
     
     %Semi Real y_i
-    y(i)=epsi(i)+sum(abs(diff([0 fi{i}(t)])/gap)*gap);%max(f(i,:))-min(f(i,:));%
-    costtrue=costtrue+epsi(i)^2;
-end
+        y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);%
+        costtrue=costtrue+epsi(i)^2;
+    end
 if is_Clustering==1
     my=mean(y);
     for i=1:n
@@ -732,6 +732,13 @@ for i = 1:size(results_table, 1)
         results_table(i,1), results_table(i,2), results_table(i,3), results_table(i,4));
 end
 fprintf('============================================================\n');
+
+% tess=n_vals;
+% for i=1:n_sample_sizes
+%     tess(i)=(results_table(2*i-1,4)+results_table(2*i,4))/2.0;
+% end
+% figure(51);
+% plot(n_vals,tess,'x-');
 % %% CI Prints
 % for i=1:(n_ci*4)
 %      gtemp=DynamicProgrammingQ_Adam(curve_to_q(betamat(i,:)),curve_to_q(betamat(1,:)),0,0);
