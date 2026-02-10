@@ -16,6 +16,7 @@ n_sample_sizes = length(n_vals);
 n_cv_folds = 2; % Number of cross-validation folds (change cross_v loop to 1:4 for all folds)
 results_table = []; % Will store [n, cross_v, trainR2, testR2]
 row_idx = 0;
+n_repeats = 5; % Number of independent dataset repeats per sample size
 
 % Huber loss scale factor (delta = huber_scale * stdER)
 huber_scale = 1.5;  % Tune this multiplier
@@ -53,6 +54,8 @@ for s_idx = 1:n_sample_sizes
     n = n_vals(s_idx);
     stdER = 0.5;
     fprintf('\nProcessing n = %d ...\n', n);
+
+    for rep = 1:n_repeats
 
     % Adaptive Huber loss: delta scales with noise level
     huber_delta = max(0.1, huber_scale * stdER);
@@ -722,6 +725,7 @@ for ci=1:n_ci
     trainR2
     testR2
 end
+    end % end repeat loop
     % --- Save intermediate results ---
     save('partial_results_codehelp.mat', 'results_table', 's_idx', 'n_vals');
     fprintf('Saved intermediate results (s_idx=%d).\n', s_idx);

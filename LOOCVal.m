@@ -261,6 +261,7 @@ clear all;
 % --- Setup Sample Sizes to Test ---
 n_vals = 40:20:620; % 30 equally spaced values, all divisible by 4
 n_trials = length(n_vals);
+n_repeats = 5; % Number of independent dataset repeats per sample size
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
@@ -277,6 +278,10 @@ for s_idx = 1:n_trials
     n = n_vals(s_idx);
     stdER = 0.5;
     fprintf('\nProcessing n = %d ...\n', n);
+
+    R2_0_accum = zeros(1, n_repeats);
+    R2_1_accum = zeros(1, n_repeats);
+    for rep = 1:n_repeats
 
     % --- DATA GENERATION (Inside loop for each sample size) ---
     gap=0.02;
@@ -311,7 +316,6 @@ for s_idx = 1:n_trials
     % --- SPLIT DATA ---
     fraction = 0.75;
     n_train = round(fraction * n);
-    rng(1); % Keep split consistent
     rand_idx = randperm(n);
     idx_train = rand_idx(1:n_train);
     idx_test  = rand_idx(n_train+1:end);
@@ -326,8 +330,12 @@ for s_idx = 1:n_trials
     % Method 2: Shape Aligned (ScoSh=1)
     [~, ~, R2_1] = run_regression_pipeline(Q_train, F_train, y_train, Q_test, F_test, y_test, t, 1);
     
-    % Store Results
-    results_table(s_idx, :) = [n, R2_0, R2_1];
+    R2_0_accum(rep) = R2_0;
+    R2_1_accum(rep) = R2_1;
+    end % end repeat loop
+
+    % Store mean Results across repeats
+    results_table(s_idx, :) = [n, mean(R2_0_accum), mean(R2_1_accum)];
 
     % --- Save intermediate results ---
     save('partial_results_LOOCVal.mat', 'results_table', 's_idx', 'n_vals');
