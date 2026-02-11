@@ -4,3 +4,4 @@ codehelp;
 fprintf('\n=== codehelp.m finished. Starting LOOCVal.m ===\n');
 LOOCVal;
 fprintf('\n=== All done. Figure 6769 is ready. ===\n');
+beep; pause(0.3); beep; pause(0.3); beep;
