@@ -99,7 +99,17 @@ The interesting thing to note in the plots is as follows: at std.dev values less
 \newpage
 \subsection*{Experiment 2: Performance vs.\ Number of Observations}
 
-In the second experiment, we fix the noise level (standard deviation of Gaussian errors) and vary the number of observations $n \in \{30, 60, 100, 200, 300, 500, 800, 1000\}$. This allows us to study how each method's prediction performance scales with sample size at a given noise regime. We consider three fixed noise levels --- low ($\sigma = 0.5$), medium ($\sigma = 1.5$), and high ($\sigma = 2.5 $) --- for both the Length and Amplitude datasets.
+In the second experiment, we investigate how the prediction performance scales with sample size $n$ under different noise regimes and response types. We vary the number of observations $n$ from 40 to 620 in increments of 20.
+
+We consider a $3 \times 2$ factorial design:
+\begin{itemize}
+    \item \textbf{Three Noise Levels:} Low ($\sigma=0.5$), Medium ($\sigma=1.5$), and High ($\sigma=2.5$) Gaussian noise $\epsilon_i$.
+    \item \textbf{Two Response Types:}
+    \begin{enumerate}
+        \item \textbf{Length:} $y_i = \text{Length}(f_i) + \epsilon_i$.
+        \item \textbf{Amplitude:} $y_i = \text{Range}(f_i) + \epsilon_i = (\max(f_i) - \min(f_i)) + \epsilon_i$.
+    \end{enumerate}
+\end{itemize}
 
 \begin{figure}[h!]
     \centering
@@ -119,10 +129,10 @@ In the second experiment, we fix the noise level (standard deviation of Gaussian
     \label{fig:n_vs_perf}
 \end{figure}
 
-% TODO: Replace with final analysis once inferences are ready.
-For both the datasets, the general trend is that as $n$ increases at each fixed noise level, SI-ScoSH and Kernel Regression with Shape distance converge in performance. Kernel Regression with $L^2$ distance remains consistently below both shape-aware methods across all sample sizes and noise levels.
+% Analysis of Figure \ref{fig:n_vs_perf}
+Figure \ref{fig:n_vs_perf} displays the results across all six conditions. The plots consistently show that SI-ScoSH (our semi-parametric approach) significantly outperforms the non-parametric alternatives in the small-sample regime ($n < 200$). This advantage is robust across both response types and all noise levels.
 
-(make curves smoother/ draw inference.. parametric bettter than non- in small n scene)
+As $n$ increases, the Kernel Regression with Shape distance begins to converge towards the performance of SI-ScoSH, illustrating that non-parametric methods require larger sample sizes to effectively estimate the underlying structure (the "curse of dimensionality," even with shape metrics). In contrast, Kernel Regression with standard $L^2$ distance remains sub-optimal throughout, failing to capture the geometric similarity of the time-warped functional data.
 
 % \section{Experimental Results}
 % We evaluate the proposed framework on two distinct examples. For each, we compare the Standard $L^2$ (ScoSh=0) and Shape Aligned (ScoSh=1) metrics.
