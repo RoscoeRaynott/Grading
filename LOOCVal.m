@@ -290,7 +290,7 @@ for s_idx = 1:n_trials
     F = zeros(n, length(t)); 
     qi = zeros(n, length(t)); 
     y = zeros(n, 1);
-    
+    f = zeros(n, length(t));
     % Reset RNG for consistent curves, but different noise if desired
     % rng(s_idx); % Optional: Uncomment to fix curves per noise level
     v=[sqrt(2) 1 sqrt(2) 1 sqrt(2) 1]*sqrt(2);
