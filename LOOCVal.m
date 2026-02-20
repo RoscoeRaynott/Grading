@@ -261,7 +261,7 @@ close all;
 % --- Setup Sample Sizes to Test ---
 n_vals = 100;%40:20:620; % 30 equally spaced values, all divisible by 4
 n_trials = 1;%length(n_vals);
-n_repeats = 3; % Number of independent dataset repeats per sample size
+n_repeats = 6; % Number of independent dataset repeats per sample size
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
@@ -328,54 +328,103 @@ for s_idx = 1:n_trials
 %         y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);%
     end
     
-    %% SpanishWeatherDAta Experiment
+% %     %% SpanishWeatherDAta Experiment
+% % 
+% %     for Data1=1
+% %     load("Data1.mat");
+% %     index=randperm(size(X,1),size(X,1));
+% %     %X=X(:,1:3:365);
+% %     s=zeros(1,31);
+% %     Xo=X(:,1:5:365);
+% %     for J=30
+% %         X=Xo;
+% %         gap=1/(size(X,2)-1);
+% %         t=0:gap:1;
+% %         %J=21;
+% %         % basis functions
+% %         for i=1:(J-1/2)
+% %             basis{1}=@(t) ones(1,size(t,2))/norm(ones(1,size(t,2)));
+% %             for j=1:i
+% %                 basis{2*j}=@(t) sin(2*pi*j*t)/norm(sin(2*pi*j*t));
+% %                 basis{2*j+1}=@(t) cos(2*pi*j*t)/norm(cos(2*pi*j*t));
+% %             end
+% %         end
+% % 
+% % 
+% %         for k=1:size(X,1)
+% %             plott=zeros(size(t));
+% %             for i=1:J
+% %                 plott=plott+X(k,:)*basis{i}(t)'*basis{i}(t);%/(norm(basis{i}(t))*norm(beta(t)));
+% %             end
+% % 
+% %     %         figure(91);
+% %     %         plot(t,X(k,:),'+-',t,plott,'.');
+% %             %s(J)=s(J)+norm(X(k,:)-plott);
+% %             X(k,:)=plott;
+% %         end
+% %     %     s(J)
+% %     end
+% %     figure(91);
+% %     plot(X','.-');
+% %     end
+% %     f=X;
+% %     y=Y;
+% %     n=size(X,1);
 
-    for Data1=1
-    load("Data1.mat");
-    index=randperm(size(X,1),size(X,1));
-    %X=X(:,1:3:365);
-    s=zeros(1,31);
-    Xo=X(:,1:5:365);
-    for J=30
-        X=Xo;
-        gap=1/(size(X,2)-1);
-        t=0:gap:1;
-        %J=21;
-        % basis functions
-        for i=1:(J-1/2)
-            basis{1}=@(t) ones(1,size(t,2))/norm(ones(1,size(t,2)));
-            for j=1:i
-                basis{2*j}=@(t) sin(2*pi*j*t)/norm(sin(2*pi*j*t));
-                basis{2*j+1}=@(t) cos(2*pi*j*t)/norm(cos(2*pi*j*t));
-            end
-        end
+     %% hvd
 
-
-        for k=1:size(X,1)
-            plott=zeros(size(t));
-            for i=1:J
-                plott=plott+X(k,:)*basis{i}(t)'*basis{i}(t);%/(norm(basis{i}(t))*norm(beta(t)));
-            end
-
-    %         figure(91);
-    %         plot(t,X(k,:),'+-',t,plott,'.');
-            %s(J)=s(J)+norm(X(k,:)-plott);
-            X(k,:)=plott;
-        end
-    %     s(J)
+    dataX=readtable('current-covid-patients-hospital.csv');
+    Countries=string(unique(dataX.Entity));
+    indexx=1;
+    CouSet=string(dataX.Entity);
+    LT=NaT(1,size(Countries,1));
+    HT=NaT(1,size(Countries,1));
+    while indexx<=size(Countries,1)
+        arr=find(CouSet==Countries(indexx));
+        LT(indexx)=dataX.Day(arr(1),:);
+        HT(indexx)=dataX.Day(arr(end),:);
+        indexx=indexx+1;
     end
-    figure(91);
-    plot(X','.-');
+
+    gap=1/daysact(min(LT),max(HT));
+    t=0:gap:1;
+    X=zeros(size(Countries,1),length(t));
+    for i=1:size(Countries,1)
+        zeross=daysact(min(LT),LT(i));
+        arr=find(CouSet==Countries(i));
+        X(i,(zeross+1):(zeross+length(arr)))=dataX.DailyHospitalOccupancy(arr);
+        ff=find(X(i,:)>0);
+        kl=X(i,ff(1));
+        X(i,1:(ff(1)-1))=(kl/(ff(1)-1)):(kl/(ff(1)-1)):kl;
+    %     X(i,:)=X(i,:)/norm(X(i,:));
     end
+    X=X(:,1:10:1019);
+
+    dataY=readtable('owid-covid-dataLatest.xlsx');
+    Y=zeros(size(Countries,1),1);
+    CouSetY=string(dataY.location);
+    for i=1:size(Countries,1)
+        arr=find(CouSetY==Countries(i));
+        Y(i)=dataY.total_deaths(arr(end));
+    end
+
+    X(isnan(Y),:)=[];
+    Countries(isnan(Y))=[];
+    Y(isnan(Y))=[];
+
+    X(end,:)=[];
+    Y(end)=[];
+    Countries(end)=[];
+    const=1;
+    Y=Y/const;
     f=X;
     y=Y;
     n=size(X,1);
-    
     F=f;
     qi = zeros(size(F));
-for i = 1:size(F,1)
-    qi(i,:) = curve_to_q(F(i,:));
-end
+    for i = 1:size(F,1)
+        qi(i,:) = curve_to_q(F(i,:));
+    end
 
     y = y(:);
     
