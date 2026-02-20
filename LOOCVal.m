@@ -261,7 +261,7 @@ close all;
 % --- Setup Sample Sizes to Test ---
 n_vals = 100;%40:20:620; % 30 equally spaced values, all divisible by 4
 n_trials = 1;%length(n_vals);
-n_repeats = 6; % Number of independent dataset repeats per sample size
+n_repeats = 2; % Number of independent dataset repeats per sample size
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
@@ -371,7 +371,57 @@ for s_idx = 1:n_trials
 % %     y=Y;
 % %     n=size(X,1);
 
-     %% hvd
+% %      %% hvd
+% % 
+% %     dataX=readtable('current-covid-patients-hospital.csv');
+% %     Countries=string(unique(dataX.Entity));
+% %     indexx=1;
+% %     CouSet=string(dataX.Entity);
+% %     LT=NaT(1,size(Countries,1));
+% %     HT=NaT(1,size(Countries,1));
+% %     while indexx<=size(Countries,1)
+% %         arr=find(CouSet==Countries(indexx));
+% %         LT(indexx)=dataX.Day(arr(1),:);
+% %         HT(indexx)=dataX.Day(arr(end),:);
+% %         indexx=indexx+1;
+% %     end
+% % 
+% %     gap=1/daysact(min(LT),max(HT));
+% %     t=0:gap:1;
+% %     X=zeros(size(Countries,1),length(t));
+% %     for i=1:size(Countries,1)
+% %         zeross=daysact(min(LT),LT(i));
+% %         arr=find(CouSet==Countries(i));
+% %         X(i,(zeross+1):(zeross+length(arr)))=dataX.DailyHospitalOccupancy(arr);
+% %         ff=find(X(i,:)>0);
+% %         kl=X(i,ff(1));
+% %         X(i,1:(ff(1)-1))=(kl/(ff(1)-1)):(kl/(ff(1)-1)):kl;
+% %     %     X(i,:)=X(i,:)/norm(X(i,:));
+% %     end
+% %     X = X(:,1:10:1019);
+% %     gap = 1/(size(X,2)-1);
+% %     t = 0:gap:1;
+% % 
+% % 
+% %     dataY=readtable('owid-covid-dataLatest.xlsx');
+% %     Y=zeros(size(Countries,1),1);
+% %     CouSetY=string(dataY.location);
+% %     for i=1:size(Countries,1)
+% %         arr=find(CouSetY==Countries(i));
+% %         Y(i)=dataY.total_deaths(arr(end));
+% %     end
+% % 
+% %     X(isnan(Y),:)=[];
+% %     Countries(isnan(Y))=[];
+% %     Y(isnan(Y))=[];
+% % 
+% %     X(end,:)=[];
+% %     Y(end)=[];
+% %     Countries(end)=[];
+% %     const=1;
+% %     Y=Y/const;
+
+    %% NCVH
 
     dataX=readtable('current-covid-patients-hospital.csv');
     Countries=string(unique(dataX.Entity));
@@ -396,29 +446,61 @@ for s_idx = 1:n_trials
         ff=find(X(i,:)>0);
         kl=X(i,ff(1));
         X(i,1:(ff(1)-1))=(kl/(ff(1)-1)):(kl/(ff(1)-1)):kl;
-    %     X(i,:)=X(i,:)/norm(X(i,:));
     end
-    X = X(:,1:10:1019);
-    gap = 1/(size(X,2)-1);
-    t = 0:gap:1;
+    Y=sum(X');
+    CouSetY=Countries;
 
-
-    dataY=readtable('owid-covid-dataLatest.xlsx');
-    Y=zeros(size(Countries,1),1);
-    CouSetY=string(dataY.location);
-    for i=1:size(Countries,1)
-        arr=find(CouSetY==Countries(i));
-        Y(i)=dataY.total_deaths(arr(end));
+    dataX=readtable('owid-covid-dataLatest.xlsx');
+    CouSetX=string(unique(dataX.location));
+    indexx=1;
+    LT=NaT(1,size(CouSetX,1));
+    HT=NaT(1,size(CouSetX,1));
+    while indexx<=size(CouSetX,1)
+        arr=find(dataX.location==CouSetX(indexx));
+        LT(indexx)=dataX.date(arr(1),:);
+        HT(indexx)=dataX.date(arr(end),:);
+        indexx=indexx+1;
     end
 
-    X(isnan(Y),:)=[];
-    Countries(isnan(Y))=[];
-    Y(isnan(Y))=[];
+    gap=1/daysact(min(LT),max(HT));
+    t=0:gap:1;
+    X=zeros(size(CouSetX,1),length(t));
+    notworthit=0;
+    for i=1:size(CouSetX,1)
+        zeross=daysact(min(LT),LT(i));
+        arr=find(dataX.location==CouSetX(i));
+        X(i,(zeross+1):(zeross+length(arr)))=dataX.new_cases(arr);
+        ff=find(X(i,:)>0);
+        if (~isempty(ff))
+            kl=X(i,ff(1));
+            X(i,1:(ff(1)-1))=(kl/(ff(1)-1)):(kl/(ff(1)-1)):kl;
+        else
+            notworthit=[notworthit i];
+        end
+    end
+    notworthit(1)=[];
+    X(notworthit,:)=[];
+    CouSetX(notworthit)=[];
+    X(isnan(X))=0;
 
-    X(end,:)=[];
-    Y(end)=[];
-    Countries(end)=[];
-    const=1;
+    [CouSetXY,ndx]=intersect(CouSetX,CouSetY,'stable');
+    X=X(ndx,:);
+    [CouSetXY,ndxY]=intersect(CouSetY,CouSetXY,'stable');
+    Y=Y(ndxY)';
+
+    for i=1:size(X,1)
+        filter=ones(1,10)/10;
+        X(i,:)=conv(X(i,:),filter,'same');
+    end
+    % for i=1:size(X,1)
+    % %     Y(i)=Y(i)/norm(X(i,:));
+    %     X(i,:)=X(i,:)/norm(X(i,:)); 
+    % end
+    X=X(:,1:10:1024);
+    % plot(X');
+    % pause();
+    % 
+    const=100000;
     Y=Y/const;
     f=X;
     y=Y;
@@ -505,10 +587,10 @@ function [tau_opt, y_pred, R2] = run_regression_pipeline(Q_tr, F_tr, y_tr, Q_te,
         DistMat(i,:) = row_dists;
     end
     DistMat = DistMat + DistMat'; % Mirror symmetry
-    
+    max(DistMat(:))
     % B. Optimize Tau
     loocv_fun = @(tau) calculate_loocv_error(tau, DistMat, y_tr);
-    tau_opt = fminbnd(loocv_fun, 0.001, 100);
+    tau_opt = fminbnd(loocv_fun, 0.001, 1e9);
     
     % C. Predict on Test Set
     y_pred = zeros(n_test, 1);
