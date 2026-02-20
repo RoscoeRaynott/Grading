@@ -261,7 +261,7 @@ close all;
 % --- Setup Sample Sizes to Test ---
 n_vals = 100;%40:20:620; % 30 equally spaced values, all divisible by 4
 n_trials = 1;%length(n_vals);
-n_repeats = 4; % Number of independent dataset repeats per sample size
+n_repeats = 3; % Number of independent dataset repeats per sample size
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
@@ -282,7 +282,7 @@ for s_idx = 1:n_trials
     R2_0_accum = zeros(1, n_repeats);
     R2_1_accum = zeros(1, n_repeats);
     for rep = 1:n_repeats
-
+    rep
     % --- DATA GENERATION (Inside loop for each sample size) ---
     gap=0.02;
     t=0:gap:1;
@@ -295,7 +295,7 @@ for s_idx = 1:n_trials
     % rng(s_idx); % Optional: Uncomment to fix curves per noise level
     v=[sqrt(2) 1 sqrt(2) 1 sqrt(2) 1]*sqrt(2);
     beta=@(t) v(1)*sin(2*pi*t)+v(2)*cos(2*pi*t)+v(3)*sin(4*pi*t)+v(4)*cos(4*pi*t)+v(5)*sin(6*pi*t)+v(6)*cos(6*pi*t);
-    h=@(t) -t.^3+5*t;%3*t+4;%t;%-3*t.^3;%t.^5+6*t.^3;%tan(t);%log(t);%t.^5+-t;%
+    h=@(t) t;%t.^3+5*t;%3*t+4;%-3*t.^3;%t.^5+6*t.^3;%tan(t);%log(t);%t.^5+-t;%
     g=@(t) t.^2;%t.^3-3.*t;%0;%t;%5*t.^2-4;%10.*t-4;%
     is_g=0;
     beta_t=beta(t);
@@ -311,7 +311,8 @@ for s_idx = 1:n_trials
         F(i,:) = f(i,:); 
         
         qi(i,:)=curve_to_q(fi{i}(t));
-        gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
+        gam_i=t;
+%         gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
 %         gamSync= gam_i;
         dumf = interp1(t, f(i,:), gam_i, 'spline');
         qi_aligned = curve_to_q(dumf);
@@ -326,6 +327,52 @@ for s_idx = 1:n_trials
         
 %         y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);%
     end
+    
+    %% SpanishWeatherDAta Experiment
+
+    for Data1=1
+    load("Data1.mat");
+    index=randperm(size(X,1),size(X,1));
+    %X=X(:,1:3:365);
+    s=zeros(1,31);
+    Xo=X(:,1:5:365);
+    for J=30
+        X=Xo;
+        gap=1/(size(X,2)-1);
+        t=0:gap:1;
+        %J=21;
+        % basis functions
+        for i=1:(J-1/2)
+            basis{1}=@(t) ones(1,size(t,2))/norm(ones(1,size(t,2)));
+            for j=1:i
+                basis{2*j}=@(t) sin(2*pi*j*t)/norm(sin(2*pi*j*t));
+                basis{2*j+1}=@(t) cos(2*pi*j*t)/norm(cos(2*pi*j*t));
+            end
+        end
+
+
+        for k=1:size(X,1)
+            plott=zeros(size(t));
+            for i=1:J
+                plott=plott+X(k,:)*basis{i}(t)'*basis{i}(t);%/(norm(basis{i}(t))*norm(beta(t)));
+            end
+
+    %         figure(91);
+    %         plot(t,X(k,:),'+-',t,plott,'.');
+            %s(J)=s(J)+norm(X(k,:)-plott);
+            X(k,:)=plott;
+        end
+    %     s(J)
+    end
+    figure(91);
+    plot(X','.-');
+    end
+    f=X;
+    y=Y;
+    n=size(X,1);
+    
+    F=f;
+    qi=curve_to_q(F);
     y = y(:);
     
     % --- SPLIT DATA ---
