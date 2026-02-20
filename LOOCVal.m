@@ -314,11 +314,11 @@ for s_idx = 1:n_trials
         gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
 %         gamSync= gam_i;
         dumf = interp1(t, f(i,:), gam_i, 'spline');
-        qi(i,:) = curve_to_q(dumf);
+        qi_aligned = curve_to_q(dumf);
         % Apply current stdER here
         epsi(i)=normrnd(0,stdER);
         %Simulation y_i
-        x(i)=gap*dot(beta_t,qi(i,:));
+        x(i)=gap*dot(beta_t,qi_aligned);
         y(i)=epsi(i)+h(x(i));
         if is_g==1
             y(i)=y(i)+g(f(i,1));
