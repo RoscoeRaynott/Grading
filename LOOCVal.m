@@ -398,7 +398,10 @@ for s_idx = 1:n_trials
         X(i,1:(ff(1)-1))=(kl/(ff(1)-1)):(kl/(ff(1)-1)):kl;
     %     X(i,:)=X(i,:)/norm(X(i,:));
     end
-    X=X(:,1:10:1019);
+    X = X(:,1:10:1019);
+    gap = 1/(size(X,2)-1);
+    t = 0:gap:1;
+
 
     dataY=readtable('owid-covid-dataLatest.xlsx');
     Y=zeros(size(Countries,1),1);
