@@ -256,12 +256,12 @@
 %% 
 
 clear all;
-% close all;
+close all;
 
 % --- Setup Sample Sizes to Test ---
-n_vals = 40:20:620; % 30 equally spaced values, all divisible by 4
-n_trials = length(n_vals);
-n_repeats = 5; % Number of independent dataset repeats per sample size
+n_vals = 100;%40:20:620; % 30 equally spaced values, all divisible by 4
+n_trials = 1;%length(n_vals);
+n_repeats = 4; % Number of independent dataset repeats per sample size
 results_table = zeros(n_trials, 3); % Columns: n, R2_L2, R2_Shape
 
 % Check for parallel pool once
@@ -276,7 +276,7 @@ for s_idx = 1:n_trials
 
     % 1. Set current sample size and fixed noise
     n = n_vals(s_idx);
-    stdER = 0.5;
+    stdER = 0.01;
     fprintf('\nProcessing n = %d ...\n', n);
 
     R2_0_accum = zeros(1, n_repeats);
@@ -293,7 +293,12 @@ for s_idx = 1:n_trials
     
     % Reset RNG for consistent curves, but different noise if desired
     % rng(s_idx); % Optional: Uncomment to fix curves per noise level
-    
+    v=[sqrt(2) 1 sqrt(2) 1 sqrt(2) 1]*sqrt(2);
+    beta=@(t) v(1)*sin(2*pi*t)+v(2)*cos(2*pi*t)+v(3)*sin(4*pi*t)+v(4)*cos(4*pi*t)+v(5)*sin(6*pi*t)+v(6)*cos(6*pi*t);
+    h=@(t) -t.^3+5*t;%3*t+4;%t;%-3*t.^3;%t.^5+6*t.^3;%tan(t);%log(t);%t.^5+-t;%
+    g=@(t) t.^2;%t.^3-3.*t;%0;%t;%5*t.^2-4;%10.*t-4;%
+    is_g=0;
+    beta_t=beta(t);
     for i=1:n
         ci1=normrnd(0,1);
         ci2=normrnd(0,1);
@@ -306,10 +311,20 @@ for s_idx = 1:n_trials
         F(i,:) = f(i,:); 
         
         qi(i,:)=curve_to_q(fi{i}(t));
-        
+        gam_i = DynamicProgrammingQ_Adam(qi(i,:), beta_t, 0, 0);
+%         gamSync= gam_i;
+        dumf = interp1(t, f(i,:), gam_i, 'spline');
+        qi(i,:) = curve_to_q(dumf);
         % Apply current stdER here
         epsi(i)=normrnd(0,stdER);
-        y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);
+        %Simulation y_i
+        x(i)=gap*dot(beta_t,qi(i,:));
+        y(i)=epsi(i)+h(x(i));
+        if is_g==1
+            y(i)=y(i)+g(f(i,1));
+        end
+        
+%         y(i)=epsi(i)+max(f(i,:))-min(f(i,:));%sum(abs(diff([0 fi{i}(t)])/gap)*gap);%
     end
     y = y(:);
     
@@ -336,7 +351,8 @@ for s_idx = 1:n_trials
 
     % Store mean Results across repeats
     results_table(s_idx, :) = [n, mean(R2_0_accum), mean(R2_1_accum)];
-
+    std(R2_0_accum)
+    std(R2_1_accum)
     % --- Save intermediate results ---
     save('partial_results_LOOCVal.mat', 'results_table', 's_idx', 'n_vals');
     fprintf('Saved intermediate results (s_idx=%d).\n', s_idx);
@@ -354,18 +370,18 @@ for i = 1:n_trials
 end
 fprintf('-----------------------------------------\n');
 
-figure(6769);
-hold on;
-plot(n_vals, results_table(:,2)', 's-', 'Color', [0.8500 0.3250 0.0980], ...
-    'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (Shape dist)');
-plot(n_vals, results_table(:,3)', 'd-', 'Color', [0.4660 0.6740 0.1880], ...
-    'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (L_2 dist)');
-xlabel('Number of Observations (n)', 'FontSize', 14);
-ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
-title('$\sigma =0.5$', 'FontSize', 14, 'Interpreter', 'latex');
-legend('FontSize', 14, 'Location', 'best');
-ax = gca; ax.FontSize = 14;
-box on;
+% figure(6769);
+% hold on;
+% plot(n_vals, results_table(:,2)', 's-', 'Color', [0.8500 0.3250 0.0980], ...
+%     'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (L_2 dist)');
+% plot(n_vals, results_table(:,3)', 'd-', 'Color', [0.4660 0.6740 0.1880], ...
+%     'LineWidth', 2.0, 'MarkerSize', 10, 'DisplayName', 'K.reg (Shape dist)');
+% xlabel('Number of Observations (n)', 'FontSize', 14);
+% ylabel('Cross Validated Test set Prediction R^2', 'FontSize', 14);
+% title('$\sigma =0.5$', 'FontSize', 14, 'Interpreter', 'latex');
+% legend('FontSize', 14, 'Location', 'best');
+% ax = gca; ax.FontSize = 14;
+% box on;
 
 % (Keep your helper functions below this line)
 %% --- HELPER FUNCTIONS ---
