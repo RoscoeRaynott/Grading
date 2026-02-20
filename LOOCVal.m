@@ -372,7 +372,11 @@ for s_idx = 1:n_trials
     n=size(X,1);
     
     F=f;
-    qi=curve_to_q(F);
+    qi = zeros(size(F));
+for i = 1:size(F,1)
+    qi(i,:) = curve_to_q(F(i,:));
+end
+
     y = y(:);
     
     % --- SPLIT DATA ---
